@@ -28,7 +28,9 @@ class AirlineSystem implements AirlineInterface {
 //        System.out.println(priceResult);
 //        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(2), as.cityNames.get(8));
 //        System.out.println(priceResult);
-        Set<ArrayList<Route>> priceResult = as.tripsWithin("Pittsburgh",593.9733584102526);
+//        Set<ArrayList<Route>> priceResult = as.tripsWithin("Pittsburgh",593.9733584102526);
+//        System.out.println(priceResult);
+        Set<ArrayList<Route>> priceResult = as.tripsWithin(593.9733584102526);
         System.out.println(priceResult);
     }
 
@@ -296,8 +298,12 @@ class AirlineSystem implements AirlineInterface {
     public Set<ArrayList<Route>> tripsWithin(double budget){
         Set<ArrayList<Route>> allPaths = new HashSet<>();
 
-        for(int s = 0; s < G.v; s++){
-            allPaths.addAll(tripsWithin(s, budget));
+        try {
+            for(int s = 0; s < G.v; s++){
+                allPaths.addAll(tripsWithin(cityNames.get(s), budget));
+            }
+        } catch (CityNotFoundException e) {
+            e.printStackTrace();
         }
 
         return allPaths;
