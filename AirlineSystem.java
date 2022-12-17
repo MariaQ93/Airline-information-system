@@ -297,12 +297,7 @@ class AirlineSystem implements AirlineInterface {
         Set<ArrayList<Route>> allPaths = new HashSet<>();
 
         for(int s = 0; s < G.v; s++){
-            G.bfs(s, true, false);
-            for(int d = 0; d < G.v; d++){
-                if(d != s && G.priceTo[s][d] <= budget){
-                    allPaths.addAll(flattenEdgeTo(s, d));
-                }
-            }
+            allPaths.addAll(tripsWithin(s, budget));
         }
 
         return allPaths;
