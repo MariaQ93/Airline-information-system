@@ -26,7 +26,9 @@ class AirlineSystem implements AirlineInterface {
 //        System.out.println(disResult);
 //        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(8));
 //        System.out.println(priceResult);
-        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(2), as.cityNames.get(8));
+//        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(2), as.cityNames.get(8));
+//        System.out.println(priceResult);
+        Set<ArrayList<Route>> priceResult = as.tripsWithin("Pittsburgh",593.9733584102526);
         System.out.println(priceResult);
     }
 
@@ -253,18 +255,41 @@ class AirlineSystem implements AirlineInterface {
 
     public Set<ArrayList<Route>> tripsWithin(String city, double budget) throws CityNotFoundException{
 
-        Set<ArrayList<Route>> allPaths = new HashSet<>();
         if(!cityNames.contains(city))
             throw new CityNotFoundException(city);
 
         int s = cityNames.indexOf(city);
-        G.bfs(s, true, false);
-        for(int d = 0; d < G.v; d++){
-            if(d != s && G.priceTo[s][d] <= budget){
-                allPaths.addAll(flattenEdgeTo(s, d));
+        int mark[] = new int[G.v];
+        Set<ArrayList<Route>> allPaths = tripsWithinRecursive(s, budget, mark);
+
+        return allPaths;
+    }
+
+    private Set<ArrayList<Route>> tripsWithinRecursive(int s, double budget, int[] mark){
+        Set<ArrayList<Route>> allPaths = new HashSet<>();
+        if(budget <= 0){
+            return allPaths;
+        }
+
+
+        mark[s] = 1;
+        LinkedList<DirectedEdge> adjs = G.adj[s];
+        for(DirectedEdge edge : adjs){
+            int t = edge.to();
+            if(mark[t] == 0){
+                for(ArrayList<Route> res : tripsWithinRecursive(t, budget - edge.price, mark)){
+                    res.add(0, new Route(cityNames.get(s), cityNames.get(t), G.distTo[s][t], G.priceTo[s][t]));
+                    allPaths.add(res);
+                }
+
+                // Default trip ending with t
+                ArrayList<Route> path = new ArrayList<>();
+                path.add(0, new Route(cityNames.get(s), cityNames.get(t), G.distTo[s][t], G.priceTo[s][t]));
+                allPaths.add(path);
             }
         }
 
+        mark[s] = 0;
         return allPaths;
     }
 
