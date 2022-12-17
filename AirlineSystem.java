@@ -28,9 +28,11 @@ class AirlineSystem implements AirlineInterface {
 //        System.out.println(priceResult);
 //        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(2), as.cityNames.get(8));
 //        System.out.println(priceResult);
-//        Set<ArrayList<Route>> priceResult = as.tripsWithin("Pittsburgh",593.9733584102526);
+//        Set<ArrayList<Route>> priceResult = as.tripsWithin("Scranton",396);
 //        System.out.println(priceResult);
-        Set<ArrayList<Route>> priceResult = as.tripsWithin(593.9733584102526);
+//        Set<ArrayList<Route>> priceResult = as.tripsWithin(593.9733584102526);
+//        System.out.println(priceResult);
+        Set<Set<Route>> priceResult = as.getMSTs();
         System.out.println(priceResult);
     }
 
@@ -225,30 +227,33 @@ class AirlineSystem implements AirlineInterface {
     }
 
     public Set<Set<Route>> getMSTs(){
-        // initializations
+        // initializations to visit all nodes
         Set<Set<Route>> MSTs = new HashSet<>();
+        boolean[] added = new boolean[G.v];
         for(int i = 0; i < G.v; i++){
-            if(!G.marked[i]){
+            if(!added[i]){
                 G.dijkstras(i, false);
+                MSTs.add(getMST(i, added));
             }
-            MSTs.add(getMST(i));
         }
 
         return MSTs;
     }
 
-    private Set<Route> getMST(int s) {
+    private Set<Route> getMST(int s, boolean[] added) {
         Set<Route> MST = new HashSet<>();
         LinkedList<Integer> q = new LinkedList<>();
         q.add(s);
+        added[s] = true;
 
         while (!q.isEmpty()) {
             s = q.remove();
             for(int d = 0; d < G.v; d++){
                 Set<Integer> edge = G.edgeTo[d];
-                if(edge.contains(s)){
+                if(edge != null && edge.contains(s)){
                     MST.add(new Route(cityNames.get(s), cityNames.get(d), G.distTo[s][d], G.priceTo[s][d]));
                     q.add(d);
+                    added[d] = true;
                 }
             }
         }
@@ -278,7 +283,7 @@ class AirlineSystem implements AirlineInterface {
         LinkedList<DirectedEdge> adjs = G.adj[s];
         for(DirectedEdge edge : adjs){
             int t = edge.to();
-            if(mark[t] == 0){
+            if(mark[t] == 0 && budget - edge.price >= 0){
                 for(ArrayList<Route> res : tripsWithinRecursive(t, budget - edge.price, mark)){
                     res.add(0, new Route(cityNames.get(s), cityNames.get(t), G.distTo[s][t], G.priceTo[s][t]));
                     allPaths.add(res);
@@ -434,25 +439,35 @@ class AirlineSystem implements AirlineInterface {
         public void dijkstras(int source, boolean usePriceAsWeight) {
             marked = new boolean[this.v];
             edgeTo = new Set[this.v];
+            int[] distToSource = new int[this.v];
+            double[] priceToSource = new double[this.v];
+            for (int i = 0; i < v; i++){
+                if(i == source){
+                    distToSource[i] = 0;
+                    priceToSource[i] = 0.0d;
+                }else{
+                    distToSource[i] = INFINITY;
+                    priceToSource[i] = Double.MAX_VALUE;
+                }
+            }
 
             marked[source] = true;
-
             int nMarked = 1;
 
             int current = source;
             while (nMarked < this.v) {
                 for (DirectedEdge w : adj(current)) {
                     if(!usePriceAsWeight){
-                        if (distTo[source][current]+w.weight() < distTo[source][w.to()]) {
+                        if (distToSource[current]+w.weight() < distToSource[w.to()]) {
                             edgeTo[w.to()] = new HashSet<>();
                             edgeTo[w.to()].add(current);
-                            distTo[source][w.to()] = distTo[source][current]+w.weight();
+                            distToSource[w.to()] = distToSource[current]+w.weight();
                         }
                     }else{
-                        if (priceTo[source][current] + w.price() < priceTo[source][w.to()]) {
+                        if (priceToSource[current] + w.price() < priceToSource[w.to()]) {
                             edgeTo[w.to()] = new HashSet<>();
                             edgeTo[w.to()].add(current);
-                            priceTo[source][w.to()] = priceTo[source][current] + w.price();
+                            priceToSource[w.to()] = priceToSource[current] + w.price();
                         }
                     }
                 }
@@ -465,12 +480,12 @@ class AirlineSystem implements AirlineInterface {
                 for(int i=0; i < this.v; i++){
                     if(marked[i])
                         continue;
-                    if(!usePriceAsWeight && distTo[source][i] < min){
-                        min = distTo[source][i];
+                    if(!usePriceAsWeight && distToSource[i] < min){
+                        min = distToSource[i];
                         current = i;
                     }
-                    if(usePriceAsWeight && priceTo[source][i] < minDouble){
-                        minDouble = priceTo[source][i];
+                    if(usePriceAsWeight && priceToSource[i] < minDouble){
+                        minDouble = priceToSource[i];
                         current = i;
                     }
                 }
@@ -481,7 +496,6 @@ class AirlineSystem implements AirlineInterface {
                     break;
             }
         }
-
     }
 
 
