@@ -7,6 +7,28 @@ class AirlineSystem implements AirlineInterface {
     private Digraph G = null;
     //private static Scanner scan = null;
     private static final int INFINITY = Integer.MAX_VALUE;
+    // debugging purpose
+    public static void main(String[] args) throws CityNotFoundException {
+        AirlineSystem as = new AirlineSystem();
+        String filename = "a4data1.txt";
+        as.loadRoutes(filename);
+
+//        System.out.println(as.cityNames);
+//        HashSet<String> kk = new HashSet<>(as.retrieveCityNames());
+//        System.out.println(kk);
+//        int i=5;
+//        System.out.println(as.cityNames.get(i));
+//        HashSet<Route> route = new HashSet<>(as.retrieveDirectRoutesFrom(as.cityNames.get(i)));
+//        System.out.println(route);
+//        Set<ArrayList<String>> fewer = new HashSet<>(as.fewestStopsItinerary(as.cityNames.get(3),as.cityNames.get(8)));
+//        System.out.println(fewer);
+//        Set<ArrayList<Route>>disResult = as.shortestDistanceItinerary(as.cityNames.get(0),as.cityNames.get(2));
+//        System.out.println(disResult);
+//        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(8));
+//        System.out.println(priceResult);
+        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(2), as.cityNames.get(8));
+        System.out.println(priceResult);
+    }
 
     public boolean loadRoutes(String fileName){
         try{
@@ -29,7 +51,9 @@ class AirlineSystem implements AirlineInterface {
                 double price = fileScan.nextDouble();
 
                 G.setDistTo(from - 1, to - 1, weight);
+                G.setDistTo(to - 1, from - 1, weight);
                 G.setPriceTo(from - 1, to - 1, price);
+                G.setPriceTo(to - 1, from - 1, price);
                 // use for debug
 //                System.out.println(price);
 //                System.out.println(weight);
@@ -167,29 +191,33 @@ class AirlineSystem implements AirlineInterface {
             throw new CityNotFoundException(destination);
 
         // initializations
-        HashSet<ArrayList<Route>> cheapestPaths = new HashSet<>();
+        HashSet<ArrayList<Route>> allPaths = new HashSet<>();
+        HashSet<ArrayList<Route>> transitPaths = new HashSet<>();
         int s = cityNames.indexOf(source);
         int d = cityNames.indexOf(destination);
         int t = cityNames.indexOf(transit);
 
         // using the bfs method to find the shortest distance(weight)
         G.bfs(s, true, false);
-        if(!G.marked[d]){
-            return cheapestPaths;
+        if(!G.marked[t]){
+            return allPaths;
         }else{
-            cheapestPaths = flattenEdgeTo(s, t);
+            transitPaths = flattenEdgeTo(s, t);
         }
 
-        HashSet<ArrayList<Route>> cheapestPathsViaTransit = new HashSet<>();
-        for(ArrayList<Route> path : cheapestPaths){
-            for(Route route: path){
-                if(route.source.equals(transit) || route.destination.equals(transit)){
-                    cheapestPathsViaTransit.add(path);
-                    break;
+        G.bfs(t, true, false);
+        if(!G.marked[d]){
+            return allPaths;
+        }else{
+            allPaths = flattenEdgeTo(t, d);
+            for(ArrayList<Route> path : allPaths){
+
+                for(ArrayList<Route> transitPath : transitPaths){
+                    path.addAll(0, transitPath);
                 }
             }
         }
-        return cheapestPathsViaTransit;
+        return allPaths;
     }
 
     public Set<Set<Route>> getMSTs(){
