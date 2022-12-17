@@ -8,27 +8,6 @@ class AirlineSystem implements AirlineInterface {
     //private static Scanner scan = null;
     private static final int INFINITY = Integer.MAX_VALUE;
 
-    // debugging purpose
-    public static void main(String[] args) throws CityNotFoundException {
-        AirlineSystem as = new AirlineSystem();
-        String filename = "a4data1.txt";
-        as.loadRoutes(filename);
-
-//        System.out.println(as.cityNames);
-//        HashSet<String> kk = new HashSet<>(as.retrieveCityNames());
-//        System.out.println(kk);
-//        int i=5;
-//        System.out.println(as.cityNames.get(i));
-//        HashSet<Route> route = new HashSet<>(as.retrieveDirectRoutesFrom(as.cityNames.get(i)));
-//        System.out.println(route);
-//        Set<ArrayList<String>> fewer = new HashSet<>(as.fewestStopsItinerary(as.cityNames.get(3),as.cityNames.get(8)));
-//        System.out.println(fewer);
-        Set<ArrayList<Route>>disResult = as.shortestDistanceItinerary(as.cityNames.get(0),as.cityNames.get(2));
-        System.out.println(disResult);
-        Set<ArrayList<Route>> priceResult = as.cheapestItinerary(as.cityNames.get(3),as.cityNames.get(8));
-        System.out.println(priceResult);
-    }
-
     public boolean loadRoutes(String fileName){
         try{
             Scanner fileScan = new Scanner(new FileInputStream(fileName));
@@ -49,6 +28,8 @@ class AirlineSystem implements AirlineInterface {
                 // price is double because it is a float type
                 double price = fileScan.nextDouble();
 
+                G.setDistTo(from - 1, to - 1, weight);
+                G.setPriceTo(from - 1, to - 1, price);
                 // use for debug
 //                System.out.println(price);
 //                System.out.println(weight);
@@ -151,7 +132,7 @@ class AirlineSystem implements AirlineInterface {
                 prevRoutes.add(new ArrayList<>());
             }
             for(ArrayList<Route> path: prevRoutes){
-                path.add(new Route(cityNames.get(prev), cityNames.get(dest), G.distTo[dest], G.priceTo[dest]));
+                path.add(new Route(cityNames.get(prev), cityNames.get(dest), G.distTo[prev][dest], G.priceTo[prev][dest]));
                 thisRoutes.add(path);
             }
         }
@@ -234,7 +215,7 @@ class AirlineSystem implements AirlineInterface {
             for(int d = 0; d < G.v; d++){
                 Set<Integer> edge = G.edgeTo[d];
                 if(edge.contains(s)){
-                    MST.add(new Route(cityNames.get(s), cityNames.get(d), G.distTo[d], G.priceTo[d]));
+                    MST.add(new Route(cityNames.get(s), cityNames.get(d), G.distTo[s][d], G.priceTo[s][d]));
                     q.add(d);
                 }
             }
@@ -251,7 +232,7 @@ class AirlineSystem implements AirlineInterface {
         int s = cityNames.indexOf(city);
         G.bfs(s, true, false);
         for(int d = 0; d < G.v; d++){
-            if(d != s && G.priceTo[d] <= budget){
+            if(d != s && G.priceTo[s][d] <= budget){
                 allPaths.addAll(flattenEdgeTo(s, d));
             }
         }
@@ -265,7 +246,7 @@ class AirlineSystem implements AirlineInterface {
         for(int s = 0; s < G.v; s++){
             G.bfs(s, true, false);
             for(int d = 0; d < G.v; d++){
-                if(d != s && G.priceTo[d] <= budget){
+                if(d != s && G.priceTo[s][d] <= budget){
                     allPaths.addAll(flattenEdgeTo(s, d));
                 }
             }
@@ -280,8 +261,8 @@ class AirlineSystem implements AirlineInterface {
         private LinkedList<DirectedEdge>[] adj;
         private boolean[] marked;  // marked[v] = is there an s-v path
         private Set<Integer>[] edgeTo;      // edgeTo[v] = previous edges on shortest s-v path
-        private int[] distTo;      // distTo[v] = weights of edges on shortest s-v path
-        private double[] priceTo;      // priceTo[v] = prices of edges on shortest s-v path
+        private int[][] distTo;      // distTo[v] = weights of edges on shortest s-v path
+        private double[][] priceTo;      // priceTo[v] = prices of edges on shortest s-v path
 
 
         /**
@@ -297,8 +278,29 @@ class AirlineSystem implements AirlineInterface {
             adj = temp;
             for (int i = 0; i < v; i++)
                 adj[i] = new LinkedList<DirectedEdge>();
+
+            distTo = new int[this.v][this.v];
+            priceTo = new double[this.v][this.v];
+            for (int i = 0; i < v; i++){
+                for(int j = 0; j < v; j++){
+                    if(i == j){
+                        distTo[i][j] = 0;
+                        priceTo[i][j] = 0.0d;
+                    }else{
+                        distTo[i][j] = INFINITY;
+                        priceTo[i][j] = Double.MAX_VALUE;
+                    }
+                }
+            }
         }
 
+        public void setDistTo(int s, int d, int dist){
+            this.distTo[s][d] = dist;
+        }
+
+        public void setPriceTo(int s, int d, double price){
+            priceTo[s][d] = price;
+        }
         /**
          * Add the edge e to this digraph.
          */
@@ -320,18 +322,9 @@ class AirlineSystem implements AirlineInterface {
 
         public void bfs(int source, boolean usePriceAsWeight, boolean useHopAsWeights) {
             marked = new boolean[this.v];
-            distTo = new int[this.v];
             edgeTo = new Set[this.v];
-            priceTo = new double[this.v];
 
             Queue<Integer> q = new LinkedList<Integer>();
-            for (int i = 0; i < v; i++){
-                distTo[i] = INFINITY;
-                marked[i] = false;
-                priceTo[i] = Double.MAX_VALUE;
-            }
-            distTo[source] = 0;
-            priceTo[source] = 0.0d;
             marked[source] = true;
             q.add(source);
 
@@ -342,39 +335,39 @@ class AirlineSystem implements AirlineInterface {
                         edgeTo[w.to()] = new HashSet<>();
                         edgeTo[w.to()].add(v);
                         if(useHopAsWeights){
-                            distTo[w.to()] = distTo[v] + 1;
+                            distTo[source][w.to()] = distTo[source][v] + 1;
                         }else{
-                            distTo[w.to()] = distTo[v] + w.weight;
+                            distTo[source][w.to()] = distTo[source][v] + w.weight;
                         }
-                        priceTo[w.to()] = priceTo[v] + w.price;
+                        priceTo[source][w.to()] = priceTo[source][v] + w.price;
                         marked[w.to()] = true;
                         q.add(w.to());
                     }else{
                         if(usePriceAsWeight){
-                            if(priceTo[v] + w.price < priceTo[w.to()]){
+                            if(priceTo[source][v] + w.price < priceTo[source][w.to()]){
                                 edgeTo[w.to()] = new HashSet<>();
                                 edgeTo[w.to()].add(v);
-                                priceTo[w.to()] = priceTo[v] + w.price;
+                                priceTo[source][w.to()] = priceTo[source][v] + w.price;
                                 q.add(w.to());
-                            }else if(priceTo[v] + w.price == priceTo[w.to()]){
+                            }else if(priceTo[source][v] + w.price == priceTo[source][w.to()]){
                                 edgeTo[w.to()].add(v);
                             }
                         }else if(useHopAsWeights){
-                            if(distTo[v] + 1 < distTo[w.to()]){
+                            if(distTo[source][v] + 1 < distTo[source][w.to()]){
                                 edgeTo[w.to()] = new HashSet<>();
                                 edgeTo[w.to()].add(v);
-                                distTo[w.to()] = distTo[v] + 1;
+                                distTo[source][w.to()] = distTo[source][v] + 1;
                                 q.add(w.to());
-                            }else if(distTo[v] + 1 == distTo[w.to()]){
+                            }else if(distTo[source][v] + 1 == distTo[source][w.to()]){
                                 edgeTo[w.to()].add(v);
                             }
                         }else{
-                            if(distTo[v] + w.weight < distTo[w.to()]){
+                            if(distTo[source][v] + w.weight < distTo[source][w.to()]){
                                 edgeTo[w.to()] = new HashSet<>();
                                 edgeTo[w.to()].add(v);
-                                distTo[w.to()] = distTo[v] + w.weight;
+                                distTo[source][w.to()] = distTo[source][v] + w.weight;
                                 q.add(w.to());
-                            }else if(distTo[v] + w.weight == distTo[w.to()]){
+                            }else if(distTo[source][v] + w.weight == distTo[source][w.to()]){
                                 edgeTo[w.to()].add(v);
                             }
 
@@ -386,19 +379,9 @@ class AirlineSystem implements AirlineInterface {
 
         public void dijkstras(int source, boolean usePriceAsWeight) {
             marked = new boolean[this.v];
-            distTo = new int[this.v];
             edgeTo = new Set[this.v];
-            priceTo = new double[this.v];
 
-
-            for (int i = 0; i < v; i++){
-                distTo[i] = INFINITY;
-                marked[i] = false;
-            }
-
-            distTo[source] = 0;
             marked[source] = true;
-            priceTo[source] = 0.0d;
 
             int nMarked = 1;
 
@@ -406,16 +389,16 @@ class AirlineSystem implements AirlineInterface {
             while (nMarked < this.v) {
                 for (DirectedEdge w : adj(current)) {
                     if(!usePriceAsWeight){
-                        if (distTo[current]+w.weight() < distTo[w.to()]) {
+                        if (distTo[source][current]+w.weight() < distTo[source][w.to()]) {
                             edgeTo[w.to()] = new HashSet<>();
                             edgeTo[w.to()].add(current);
-                            distTo[w.to()] = distTo[current]+w.weight();
+                            distTo[source][w.to()] = distTo[source][current]+w.weight();
                         }
                     }else{
-                        if (priceTo[current] + w.price() < priceTo[w.to()]) {
+                        if (priceTo[source][current] + w.price() < priceTo[source][w.to()]) {
                             edgeTo[w.to()] = new HashSet<>();
                             edgeTo[w.to()].add(current);
-                            priceTo[w.to()] = priceTo[current] + w.price();
+                            priceTo[source][w.to()] = priceTo[source][current] + w.price();
                         }
                     }
                 }
@@ -428,12 +411,12 @@ class AirlineSystem implements AirlineInterface {
                 for(int i=0; i < this.v; i++){
                     if(marked[i])
                         continue;
-                    if(!usePriceAsWeight && distTo[i] < min){
-                        min = distTo[i];
+                    if(!usePriceAsWeight && distTo[source][i] < min){
+                        min = distTo[source][i];
                         current = i;
                     }
-                    if(usePriceAsWeight && priceTo[i] < minDouble){
-                        minDouble = priceTo[i];
+                    if(usePriceAsWeight && priceTo[source][i] < minDouble){
+                        minDouble = priceTo[source][i];
                         current = i;
                     }
                 }
