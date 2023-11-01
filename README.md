@@ -223,29 +223,3 @@ path is an ArrayList<Route> of Route
      */
     public Set<ArrayList<Route>> tripsWithin
 (double budget);
-```
-. You must encapsulate the functionality of your airline in a **single, cohesive class** named `AirlineSystem.java`, which `implements`  `AirlineInterface`. You must represent the graph using **adjacency lists**. The cities should minimally have a string for a name and any other information you want to add. The edges will have multiple weights (distance, price). **Again, you may use the code from Lab 8 and Lab 9**.
-
-.	You must use the algorithms and implementations discussed in class for your queries. For example,  for the shortest distance paths you must use **Dijkstra’s algorithm** and to obtain the shortest-hops path you must use **breadth-first search**.
-
-. The test program `AirlineTest.java` has a menu-driven loop that asks the user for many choices. Please use this program to test your code.
-
-.	Below is an example input file, visual graphs, and responses to some of the queries listed above. The index numbers for the vertices are based on the order that the cities appear in the file (note that the indexing starts at 1). Please also check `sample-output.txt` for more examples.
-
-![](docs/a4-1.png)
-![](docs/a4-2.png)
-
-
-Item|Points
-----|------|
-(**Mandatory**) `loadRoutes`|	12
-(**Mandatory**) `retrieveCityNames`|	12
-(**Mandatory**) `retrieveDirectRoutesFrom`|	12
-`fewestStopsItinerary`|	12
-`shortestDistanceItinerary`|	12
-`cheapestItinerary`|	8
-`cheapestItinerary` with transit | 8
-`getMSTs`|	8
-`tripsWithin` with a city and a budget | 8 
-`tripsWithin` with budget only|	8
-Extra Credit|	10 points
